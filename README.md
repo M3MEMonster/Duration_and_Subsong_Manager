@@ -2,11 +2,8 @@
 
 A [foobar2000](https://www.foobar2000.org/) component that lets you override the length of any track, hide individual subsongs from the Media Library, and read playback time at millisecond precision.
 
-Requires foobar2000 **v2.0 or newer** (Windows, 32-bit and 64-bit).
-
 **Language:** English | [中文](#中文)
 
----
 
 ## Features
 
@@ -18,7 +15,7 @@ Requires foobar2000 **v2.0 or newer** (Windows, 32-bit and 64-bit).
 
 ### Subsong Manager — hide subsongs
 - For multi-subsong files, choose exactly which subsongs are visible in the autoplaylists.
-- Configure include/exclude ranges (e.g. `1-3,5,7`) in **Preferences → Tools → Duration & Subsong Manager → Subsong Manager**.
+- Configure include/exclude ranges (e.g. `1-3,5,7`) or checkbox in **Preferences → Tools → Duration & Subsong Manager → Subsong Manager**.
 - Note: this filters the Media Library query at runtime, so changes take effect after a restart.
 
 ### High-Precision Timer (UI element)
@@ -26,14 +23,14 @@ Requires foobar2000 **v2.0 or newer** (Windows, 32-bit and 64-bit).
 - Add it via the layout editor like any other UI element ("High-Precision Timer").
 
 ## Compatibility
-- foobar2000 **v2.0 or newer**, Windows, both 32-bit and 64-bit builds.
+- foobar2000 **v2.0 or newer**, Windows, 32-bit and 64-bit.
 - Built against the foobar2000 SDK (2025-03-07).
 
 ## Installation
 1. Download the latest `foo_duration_subsong_manager.fb2k-component` from the [Releases](https://github.com/M3MEMonster/Duration_and_Subsong_Manager/releases) page.
 2. In foobar2000: **Preferences → Components → Install...** (or just drag the file onto the window), then **Apply** and restart.
 
-## Building from source (developers)
+## Building from source
 
 ### Prerequisites
 - Visual Studio 2022 with the **Desktop development with C++** workload (and a Windows 10/11 SDK).
@@ -73,7 +70,7 @@ If your layout differs, update these entries in `DurationAndSubsongManager.vcxpr
 The custom-duration feature is upheld by three independent mechanisms:
 - `duration_database.cpp` `refresh_metadb` — writes the length into the metadb via hints (on load / edit).
 - `info_filter.cpp` — re-applies the length whenever foobar2000 re-reads file info.
-- `playback_monitor.cpp` — truncates playback by skipping to the next track at the custom length.
+- `playback_monitor.cpp` — truncates playback at the custom length.
 
 Subsong hiding (`subsong_hider.cpp`) uses MinHook to intercept the Media Library's sqlite query and drop hidden subsong rows.
 
@@ -99,7 +96,6 @@ Released under the [MIT License](LICENSE).
 
 一个 [foobar2000](https://www.foobar2000.org/) 插件：可以自定义任意音轨的时长、把多子歌曲文件中的某些子歌曲从autoplaylist中隐藏，并以毫秒精度显示播放时间。
 
-> 需要 foobar2000 **v2.0 或更新版本**（Windows，32 位和 64 位）。
 
 **语言：** [English](#duration--subsong-manager) | 中文
 
@@ -109,11 +105,11 @@ Released under the [MIT License](LICENSE).
 - 通过右键菜单 **“Set custom duration”** 为任意音轨设置自定义时长。
 - 在 **Preferences → Tools → Duration & Subsong Manager → Duration Manager** 中统一管理（搜索、编辑、删除）。
 - 记录以文件**内容哈希 + 子歌曲索引**为键匹配，因此文件移动 / 改名后依然有效。
-- 播放时会按自定义时长自动截断（到达后跳到下一首）。
+- 播放时会按自定义时长自动截断。
 
 #### 子歌曲管理器（Subsong Manager）—— 隐藏子歌曲
 - 对于含多个子歌曲的文件，可精确选择哪些子歌曲显示在autoplaylist中。
-- 在 **Preferences → Tools → Duration & Subsong Manager → Subsong Manager** 中以区间方式配置包含 / 排除（例如 `1-3,5,7`）。
+- 在 **Preferences → Tools → Duration & Subsong Manager → Subsong Manager** 中以区间方式（例如 `1-3,5,7`）或勾选框配置。
 - 注意：该功能在运行时过滤媒体库查询，改动需要重启后才生效。
 
 #### 高精度计时器（High-Precision Timer，UI 元素）
@@ -128,7 +124,7 @@ Released under the [MIT License](LICENSE).
 1. 从 [Releases](https://github.com/M3MEMonster/Duration_and_Subsong_Manager/releases) 页面下载最新的 `foo_duration_subsong_manager.fb2k-component`。
 2. 在 foobar2000 中：**首选项 → Components → Install...**（或直接把文件拖到窗口里），然后 **Apply** 并重启。
 
-### 从源码构建（面向开发者）
+### 从源码构建
 
 #### 前置条件
 - Visual Studio 2022，安装 **“使用 C++ 的桌面开发”** 工作负载（以及 Windows 10/11 SDK）。
