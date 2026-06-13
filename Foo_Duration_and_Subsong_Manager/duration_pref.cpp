@@ -264,7 +264,8 @@ private:
 		return filter.test(blob);
 	}
 };
-
+//由于foobar2000允许在Preferences打开的情况下继续操作播放列表，故写了该函数以能够在窗口已经打开的状态下刷新preferences page
+//Since fb2k allows users do actions while the preferences page opens, this function is written to refresh preferences page even it has been opend
 void duration_pref_refresh() {
 	fb2k::inMainThread([] {
 		if (g_open_prefs != nullptr) {

@@ -28,10 +28,8 @@ namespace {
 	std::mutex media_stmt_mutex;
 
 	int __cdecl my_sqlite3_step(sqlite3_stmt* stmt) {
-		// label + goto 构成一个「跳过当前行」的重试循环：若当前行对应的子歌曲被设为隐藏，
-		// 就再调一次 original_sqlite3_step 取下一行，对调用方而言被隐藏的行就像不存在。
-		// label + goto form a "skip this row" retry loop: if the current row's subsong is hidden,
-		// we call original_sqlite3_step again to fetch the next row, so hidden rows appear nonexistent to the caller.
+		// Hide subsong by silently go to next step using goto label
+		// 通过goto label静默继续查询实现稳定隐藏
 	label:
 		int ret;
 		ret = original_sqlite3_step(stmt);
@@ -43,19 +41,16 @@ namespace {
 		if (is_media_stmt && ret == SQLITE_ROW) {
 			const unsigned char* text = sqlite3_column_text(stmt, 0);
 			int subsong_index = 0;
+			//column 'name' format is [subsong_index]+[file_path]
 			if (text) {
-				// column 0 文本格式为 "<subsong索引>+<URL文件路径>"，例如 "0+file://C:\music\a.flac"。
-				// 下面先解析 '+' 之前的前导数字作为 subsong 索引（*text - 48 即减去 '0'），'+' 之后即文件路径。
-				// column 0 text format is "<subsongIndex>+<filePath>", e.g. "0+file://C:\music\a.flac".
-				// Parse the leading digits before '+' as the subsong index (*text - 48 == subtract '0'); the rest is the path.
 				for (text; *text != '+'; text++) {
 					subsong_index = subsong_index * 10 + (*text - 48);
 				}
 				text++;
 				pfc::string8 file_path(reinterpret_cast<const char*>(text));
 				_temp_container[file_path].insert(subsong_index);
-				// 不同解码器的 subsong 索引有的从 0 开始、有的从 1 开始，因此查 subsong_filter 时要按 is0base 决定是否减 1。
-				// Some decoders index subsongs from 0, others from 1, so adjust by is0base (subtract 1) when indexing subsong_filter.
+				// 不同解码器的 subsong 索引有的从 0 开始、有的从 1 开始
+				// Some decoders index subsongs from 0, others from 1.
 				if (mul_subsong_filter.exists(file_path)) {
 					if (mul_subsong_filter[file_path].is0base) {
 						if (!mul_subsong_filter[file_path].subsong_filter[subsong_index]) goto label;
@@ -71,10 +66,8 @@ namespace {
 	}
 	int __cdecl my_sqlite3_prepare_v2(sqlite3* db, const char* zSql, int nByte, sqlite3_stmt** ppStmt, const char** pzTail) {
 		int ret = original_sqlite3_prepare_v2(db, zSql, nByte, ppStmt, pzTail);
-		// 只标记精确匹配 "SELECT name FROM media" 的语句（记入 media_stmt 集合）；
-		// my_sqlite3_step 仅对这些被标记的 statement 生效，避免误伤其他查询。
-		// Only tag statements that exactly match "SELECT name FROM media" (recorded in media_stmt);
-		// my_sqlite3_step only acts on these tagged statements, so other queries are left untouched.
+		//仅捕捉该类型查询
+		//Only this kind query will be marked
 		if (zSql && strcmp(zSql, "SELECT name FROM media") == 0) {
 			{
 				std::lock_guard<std::mutex> lock(media_stmt_mutex);
@@ -144,11 +137,7 @@ namespace subsong_db {
 		auto step = GetProcAddress(sqlite, "sqlite3_step");
 		auto col_text = GetProcAddress(sqlite, "sqlite3_column_text");
 		auto final = GetProcAddress(sqlite, "sqlite3_finalize");
-		// 注意：sqlite3_column_text 不做 hook，只是保存原始函数指针供 my_sqlite3_step 直接调用读取列文本；
-		// 只有 prepare_v2、step、finalize 三个函数。
-		// Note: sqlite3_column_text is NOT hooked — we just keep its original pointer to read column text in my_sqlite3_step;
-		// only prepare_v2 / step / finalize are actually replaced by MinHook.
-		sqlite3_column_text = reinterpret_cast<sqlite3_column_text_t>(col_text);
+		sqlite3_column_text = reinterpret_cast<sqlite3_column_text_t>(col_text); /*Not hooked, only for using in my_sqlite3_step */
 		MH_CreateHook(reinterpret_cast<LPVOID>(prepare), &my_sqlite3_prepare_v2, reinterpret_cast<LPVOID*>(&original_sqlite3_prepare_v2));
 		MH_CreateHook(reinterpret_cast<LPVOID>(step), &my_sqlite3_step, reinterpret_cast<LPVOID*>(&original_sqlite3_step));
 		MH_CreateHook(reinterpret_cast<LPVOID>(final), &my_sqlite3_finalize, reinterpret_cast<LPVOID*>(&original_sqlite3_finalize));

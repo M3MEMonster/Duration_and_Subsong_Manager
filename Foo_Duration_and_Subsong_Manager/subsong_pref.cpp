@@ -43,8 +43,6 @@ public:
 	void OnChanged() {
 		m_callback->on_state_changed();
 	}
-	// 逐文件比较「编辑中的副本」temp_filter 与「已保存的」mul_subsong_filter 的过滤数组是否不同。
-	// Compares the in-edit copy (temp_filter) against the saved state (mul_subsong_filter) per file.
 	bool HasChanged() {
 		for (subsong_db::subsong_list item : temp_filter) {
 			if (item.subsong_filter != mul_subsong_filter[item.file_path].subsong_filter) return true;
@@ -100,11 +98,8 @@ private:
 					subsong_db::subsong_list su_item{};
 					su_item.file_path = key;
 					su_item.subsong_filter.assign(subsong_count, true);
-					// 推断索引是 0 基还是 1 基：size 是subsong个数，*rbegin() 是其中最大值。
-					// 0 基示例 {0,1,2}：size3 - max2 = 1 -> true；1 基示例 {1,2,3}：size3 - max3 = 0 -> false。
-					// Infer 0-based vs 1-based indexing: size indicates the number of subsongs, *rbegin() is the max.
-					// 0-based {0,1,2}: size3 - max2 = 1 -> true; 1-based {1,2,3}: size3 - max3 = 0 -> false.
-					su_item.is0base = item.size() - *item.rbegin();
+					// 推断索引是 0 基还是 1 基. Infer the index is 0-based or 1-based
+					su_item.is0base = item.size() - *item.rbegin();/*Exmaple: 0-based {0,1,2}: size3 - max2 = 1 -> true; 1-based {1,2,3}: size3 - max3 = 0 -> false.*/
 					if (mul_subsong_filter.exists(key)) {
 						temp_filter.emplace_back(mul_subsong_filter[key]);
 					}
@@ -196,13 +191,8 @@ private:
 		range_to_text();
 		OnChanged();
 	}
-	// 把 bool 过滤数组转换成区间文本（如 "1-3,5,7"）。
-	// 算法（用 goto loop/finish 实现的状态机）：扫过数组，跳过 0；遇到一段连续的 1 时输出起点，若长度>1 再输出 "-终点"；多段之间用逗号分隔。
-	// Exclude 模式会先把整个数组取反再生成文本（因为文本框展示的是"被排除"的范围）。
-	// Converts the bool filter array into range text (e.g. "1-3,5,7").
-	// Algorithm (a goto loop/finish state machine): scan the array, skip 0s; 
-	// for each run of 1s emit the start, and "-end" if the run is longer than 1; separate runs with commas.
-	// In Exclude mode the whole array is inverted first before generating text (the box shows the EXCLUDED ranges).
+	// 把 bool 过滤数组转换成区间文本（如 "1-3,5,7"，无空格）。
+	// Converts the bool filter array into range text (e.g. "1-3,5,7", no space).
 	void range_to_text() {
 		m_internal_update = true;
 		if (m_file_sel == SIZE_MAX || m_file_sel >= mul_subsong_filter.size()) {
@@ -229,6 +219,7 @@ private:
 			su_ptr++;
 			index++;
 		}
+		//Record start position of 1
 		if (su_ptr == end) goto finish;
 		if (s.is0base) {
 			range << pfc::format_uint(index);
@@ -236,6 +227,7 @@ private:
 		else {
 			range << pfc::format_uint(index + 1);
 		}
+		//To see whether the length of 1 is larger than 1. If yes, record the end position of 1
 		index_2 = index;
 		while (su_ptr != end && *su_ptr == 1) {
 			su_ptr++;
@@ -251,6 +243,7 @@ private:
 		}
 		index = index_2;
 		if (su_ptr == end) goto finish;
+		//To see if this chunk of 1 is the last chunk. If not, add a comma
 		su_ptr_2 = su_ptr;
 		while (su_ptr_2 != end && *su_ptr_2 == 0) {
 			su_ptr_2++;
@@ -263,13 +256,8 @@ private:
 		SetDlgItemText(IDC_RANGE_INPUT, pfc::stringcvt::string_wide_from_utf8(range.c_str()).get_ptr());
 		m_internal_update = false;
 	}
-	// range_to_text 的逆操作：把用户输入的区间文本解析回 bool 过滤数组。
-	// 解析过程做了大量边界校验（非法字符、区间顺序、越界、1 基时 0 非法等），任一不合法就直接 return 放弃本次解析；
-	// 同样地，Exclude 模式会在最后把结果取反。
-	// Inverse of range_to_text: parses the user's range text back into the bool filter array.
-	// It performs strict validation (illegal chars, range order, out-of-bounds, 0 is invalid when 1-based, etc.); 
-	// any failure aborts via an early return.
-	// Likewise, Exclude mode inverts the result at the end.
+	// range_to_text 的逆操作
+	// Inverse of range_to_text
 	void text_to_range() {
 		if (m_file_sel == SIZE_MAX || m_file_sel >= temp_filter.size()) return;
 		auto& s = temp_filter[m_file_sel];
@@ -281,6 +269,8 @@ private:
 		std::vector<uint8_t> mask;
 		mask.assign(s.subsong_filter.size(), false);
 		if (text_p8.isEmpty()) goto end;
+		//若包含非法字符则回退
+		//return if contains illegal char
 		{
 			auto isAllowed = [](char c) {
 				return (c >= '0' && c <= '9') || c == '-' || c == ',';
@@ -299,6 +289,8 @@ private:
 				for (auto& num_str : out_2) {
 					se.emplace_back(pfc::atoui_ex(num_str.c_str(), num_str.length()));
 				}
+				//数字异常或格式异常则回退
+				//return if the number or format is abnormal
 				if (se.size() != 2 || se[0] > se[1] || se[0] > mask.size() || se[1] > mask.size()) return;
 				
 				if (!s.is0base) {

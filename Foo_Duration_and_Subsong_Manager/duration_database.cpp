@@ -42,15 +42,9 @@ namespace duration_db {
             hasher->process(finalState, contentHash.c_str(), contentHash.length());
         }
         else {
-            // 文件打不开时的回退：改用路径参与哈希，至少保证 key 仍然唯一可用。
-            // Fallback for inaccessible files: hash the path instead so the key stays unique/usable.
             hasher->process(finalState, path, strlen(path));
         }
-        // 用 '\0' 作为分隔符，防止前面的哈希/路径与下面的 subsong 字节粘连而产生碰撞。
-        // '\0' acts as a separator so the preceding hash/path can't run into the subsong bytes and cause collisions.
         hasher->process(finalState, "\0", 1);
-        // 把 subsong 的原始字节并入哈希：同一文件的不同子歌曲会得到不同的 key。
-        // Mix in the raw subsong bytes: different subsongs of the same file get different keys.
         hasher->process(finalState, &subsong, sizeof(subsong));
         return hasher->get_result(finalState).toString();
 	}
@@ -82,8 +76,6 @@ namespace duration_db {
                 item.hash_key = key;
                 song_container[key] = item;
             }
-            // 只有用户真正改过时长（custom != original）的条目才需要把改动推回 metadb，未改过的跳过以节省开销。
-            // Only push changes back to metadb for entries the user actually edited (custom != original); skip the rest.
             for (auto& [key, item] : song_container) {
                 if (item.custom_duration != item.original_duration) {
                     refresh_metadb(hints, &item, 'C');
@@ -93,10 +85,6 @@ namespace duration_db {
         }
         
     }
-    // 通过 metadb hints 把内存中的时长「强制覆盖」回 foobar 的元数据库。
-    // mode 'C'(Custom) 写入自定义时长；mode 'R'(Recover) 写回原始时长（删除条目时用于还原）。
-    // Force-overrides the track length in foobar's metadb via hints.
-    // mode 'C'(Custom) writes the custom length; mode 'R'(Recover) restores the original length (used when deleting entries).
     void refresh_metadb(metadb_hint_list_v3::ptr& hints,const song_item* item, char mode) {
         metadb_handle_ptr handle;
         metadb_info_container::ptr oldInfoRef;

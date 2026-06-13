@@ -84,10 +84,6 @@ namespace {
                 HWND_MESSAGE, nullptr, core_api::get_my_instance(), this);
             return m_hwnd != nullptr;
         }
-        // 创建时把 this 指针（CreateWindow 传入的 lpCreateParams）存进 GWLP_USERDATA，
-        // 之后静态的 WndProc 就能取回它并回调到具体对象实例。
-        // On WM_CREATE, stash the `this` pointer (passed as lpCreateParams) into GWLP_USERDATA,
-        // so this static WndProc can retrieve it later and dispatch to the object instance。
         static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
             
             if (msg == WM_CREATE) {
@@ -105,9 +101,8 @@ namespace {
             return ::DefWindowProcW(hwnd, msg, wp, lp);
         }
 
-        // 定时轮询播放位置：一旦到达自定义时长 m_stop_at 就切到下一首——这就是「自定义时长截断播放」实际生效的地方。
-        // Polls the playback position: once it reaches the custom length m_stop_at, jump to the next track
-        // This is where "custom-duration truncation" actually takes effect.
+        // 一旦到达自定义时长 m_stop_at 就切到下一首（截断）
+        // When it reaches the custom length m_stop_at, truncate it.
         void on_timer() {
             if (m_stop_at <= 0) return;
             auto pc = playback_control::get();
