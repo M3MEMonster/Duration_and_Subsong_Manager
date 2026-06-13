@@ -2,7 +2,7 @@
 
 A [foobar2000](https://www.foobar2000.org/) component that lets you override the length of any track, hide individual subsongs from the Media Library, and read playback time at millisecond precision.
 
-> Requires foobar2000 **v2.0 or newer** (Windows, 32-bit and 64-bit).
+Requires foobar2000 **v2.0 or newer** (Windows, 32-bit and 64-bit).
 
 **Language:** English | [中文](#中文)
 
